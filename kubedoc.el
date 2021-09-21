@@ -1,11 +1,42 @@
-;;; kubernets-docs.el --- Kubernetes API Documentation -*- lexical-binding: t; -*-
+;;; kubedoc.el --- Kubernetes API Documentation -*- lexical-binding: t; -*-
+;;
+;; Copyright (C) 2021 Dean Lindqvist Todevski
+;;
+;; Author: Dean Lindqvist Todevski <https://github.com/r0bobo>
+;; Maintainer: Dean Lindqvist Todevski
+;; Keywords: docs help tools
+;; Version: 1.0
+;; Homepage: https://github.com/r0bobo/kubedoc.el/
+;; Package-Requires: ((emacs "27.1"))
+
+;; This file is NOT part of GNU Emacs.
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 ;;; Commentary:
+
+;; kubedoc.el provides Kubernetes API documentation in Emacs.
+
+;;; Code:
+
+;;;; Requirements
 
 (require 'cl-lib)
 (require 'seq)
 (require 'subr-x)
 
-;;; Code:
+;;;; Completion style
 
 (add-to-list 'completion-category-overrides '(kubedoc (styles partial-completion)))
 
@@ -17,8 +48,7 @@
 (defconst kubedoc-font-lock-defaults
   `(("^KIND\\|^VERSION\\|^RESOURCE\\|^DESCRIPTION\\|^FIELDS?" . font-lock-keyword-face)
     ("-required-" . font-lock-function-name-face)
-    ("\\(<.+>\\)\\( -required-\\)?$" 1 font-lock-comment-face)
-    ))
+    ("\\(<.+>\\)\\( -required-\\)?$" 1 font-lock-comment-face)))
 
 (defvar kubedoc-mode-map
   (let ((map (make-sparse-keymap)))
@@ -38,7 +68,7 @@
   'action #'kubedoc--field-button-function)
 
 
-;;;; Functions
+;;;; Commands
 
 (defun kubedoc--imenu-goto-field (_name position)
   (goto-char (+ position 3)))
@@ -74,9 +104,14 @@
          (prev-indent 0)
          (explain-output-lines
           (split-string
-           (funcall (or kubedoc--field-completion-source-function 'kubedoc--default-field-completion-source-function) resource)
+           (funcall (or kubedoc--field-completion-source-function
+                        'kubedoc--default-field-completion-source-function)
+                    resource)
            "\\\n" t))
-         (explain-output-lines-trimmed (seq-drop-while (lambda (e) (not (string-match "^FIELDS" e))) explain-output-lines)))
+         (explain-output-lines-trimmed
+          (seq-drop-while
+           (lambda (e) (not (string-match "^FIELDS" e)))
+           explain-output-lines)))
 
     (dolist (item explain-output-lines-trimmed)
       (unless (string-match "^FIELDS" item)
@@ -118,21 +153,17 @@
          (lambda (e)
            (string-prefix-p path e))
          (kubedoc--resource-completion-table))
-
       (seq-uniq
        (mapcar
         (lambda (e)
           (let* ((trimmed (string-remove-prefix (file-name-directory path) e))
                  (end (or (string-match-p "/" trimmed) (- (length trimmed) 1))))
-            (substring trimmed 0 (+ end 1))
-            )
-          )
+            (substring trimmed 0 (+ end 1))))
         (seq-filter
          (lambda (e)
            (string-prefix-p path e))
          (kubedoc--field-completion-table-cached resource)))
-       #'string-equal)
-      )))
+       #'string-equal))))
 
 (defun kubedoc--completion-sort (collection)
   (seq-sort
@@ -147,12 +178,10 @@
 (defun kubedoc--completion-function (string pred action)
   "Completion for Kubernetes API resources."
   (cond
-   ;; ((eq action 'metadata) nil)
    ((eq action 'metadata)
     '(metadata (category . kubedoc)
                (display-sort-function . kubedoc--completion-sort)))
 
-   ;; completion-boundaries
    ((eq (car-safe action) 'boundaries)
     (let* ((start (length (file-name-directory string)))
            (end (string-match-p "/" (cdr action))))
@@ -196,7 +225,8 @@
          (path-trailing-slash (concat path "/")))
     (if (kubedoc--completion-table path-trailing-slash) path-trailing-slash path)))
 
-;;;; Interactive functions
+
+;;;; Interactive commands
 
 ;;;###autoload
 (defun kubedoc ()
@@ -230,10 +260,10 @@
   (interactive)
   (setq kubedoc--field-completion-table-cache nil))
 
+
 ;;;; Mode
 (define-derived-mode kubedoc-mode special-mode "kubedoc"
   ""
-
   (setq buffer-auto-save-file-name nil
         truncate-lines t
         buffer-read-only t
@@ -243,6 +273,7 @@
   (auto-fill-mode -1)
   (kubedoc--highlight-field-links)
   (goto-char (point-min)))
+
 
 (provide 'kubedoc)
 ;;; kubedoc.el ends here
