@@ -2,20 +2,7 @@
 ;;
 ;; Copyright (C) 2021 Dean Lindqvist Todevski
 ;;
-;; Author: Dean Lindqvist Todevski <https://github.com/r0bobo>
-;; Maintainer: Dean Lindqvist Todevski <dean.todevski@gmail.com>
-;; Created: September 08, 2021
-;; Modified: September 08, 2021
-;; Version: 0.0.1
-;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
-;; Homepage: https://github.com/r0bobo/kubedoc-tests
-;; Package-Requires: ((emacs "24.3"))
-;;
-;; This file is not part of GNU Emacs.
-;;
 ;;; Commentary:
-;;
-;;  Description
 ;;
 ;;; Code:
 
@@ -24,7 +11,7 @@
 (load-file "kubedoc.el")
 
 (defun kubedoc-tests-completion-function (_resource)
-  ""
+  "Mocked completion table without calling any Kubernetes api server."
   "KIND:     ConfigMap
 VERSION:  v1
 
@@ -69,6 +56,7 @@ FIELDS:
 ")
 
 (defmacro kubedoc-tests-fixture (&rest body)
+  "Run test (BODY) with mocks."
   `(unwind-protect
       (progn (setq kubedoc--field-completion-source-function #'kubedoc-tests-completion-function)
              ,@body)
