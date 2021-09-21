@@ -71,10 +71,11 @@
 ;;;; Commands
 
 (defun kubedoc--imenu-goto-field (_name position)
+  "Jump to correctly indented field (POSITION)."
   (goto-char (+ position 3)))
 
 (defun kubedoc--highlight-field-links ()
-  "Create field links buttons in current buffer."
+  "Create field link buttons in current buffer."
   (while (re-search-forward "^   \\(\\w+\\)" nil t)
     (make-button
      (match-beginning 1)
@@ -83,11 +84,13 @@
      'kubectl-section (match-string 1))))
 
 (defun kubedoc--field-button-function (button)
+  "Follow field link in (BUTTON)."
   (with-current-buffer (current-buffer)
     (let ((field (button-get button 'kubectl-section)))
       (apply #'kubedoc--view-resource (append kubedoc--buffer-path (list field))))))
 
 (defun kubedoc--resource-completion-table ()
+  "Completion candidate list for all known Kubernetes resources in the cluster."
   (mapcar
    (lambda (e) (concat e "/"))
    (split-string
@@ -95,17 +98,19 @@
      "kubectl api-resources --cached --output name") nil t)))
 
 (defun kubedoc--default-field-completion-source-function (resource)
+  "Field completions for (RESOURCE) using shell command `kubectl explain'."
   (shell-command-to-string
    (concat "kubectl explain --recursive " (shell-quote-argument resource))))
 
 (defun kubedoc--field-completion-table (resource)
+  "Completion candidate list for all fields of Kubernetes (RESOURCE)."
   (let* ((res '())
          (path '())
          (prev-indent 0)
          (explain-output-lines
           (split-string
            (funcall (or kubedoc--field-completion-source-function
-                        'kubedoc--default-field-completion-source-function)
+                        #'kubedoc--default-field-completion-source-function)
                     resource)
            "\\\n" t))
          (explain-output-lines-trimmed
@@ -138,6 +143,7 @@
     (mapcar (lambda (e) (concat resource "/" e)) res)))
 
 (defun kubedoc--field-completion-table-cached (resource)
+  "Cached Completion candidate list for all fields of Kubernetes (RESOURCE)."
   (let ((cached (cdr (assoc resource kubedoc--field-completion-table-cache))))
     (if (null cached)
         (let ((all (kubedoc--field-completion-table resource)))
@@ -146,6 +152,8 @@
       cached)))
 
 (defun kubedoc--completion-table (path)
+  "Completion candidate list for given Kubernetes resource and field (PATH).
+\(PATH) is a filesystem style path such as `pods/spec/containers'"
   (let* ((string-parts (split-string path "/+"))
          (resource (car string-parts)))
     (if (= (length string-parts) 1)
@@ -166,6 +174,8 @@
        #'string-equal))))
 
 (defun kubedoc--completion-sort (collection)
+  "Completion candidate list sorting of (COLLECTION).
+Sorts alphabetically with parent fields on top."
   (seq-sort
    (lambda (a b)
      (let ((a-parent-p (string= (substring a -1) "/"))
@@ -176,7 +186,8 @@
    collection))
 
 (defun kubedoc--completion-function (string pred action)
-  "Completion for Kubernetes API resources."
+  "Completion for Kubernetes API resources.
+See argument (STRING) (PRED) (ACTION) descriptions in command `complete-with-action'."
   (cond
    ((eq action 'metadata)
     '(metadata (category . kubedoc)
@@ -195,14 +206,13 @@
       (complete-with-action action (kubedoc--completion-table string) candidate pred)))))
 
 (defun kubedoc--view-resource (resource &rest field)
-  ""
+  "Display Kubernetes api documentation for (RESOURCE) and optionally (FIELD)."
   (let* ((path (append (list resource) field))
          (prev-buffer (current-buffer))
          (buffer (concat "*Kubernetes Docs <" (string-join path "/") ">*")))
     (unless (get-buffer buffer)
       (with-current-buffer (get-buffer-create buffer)
         (shell-command (concat "kubectl explain " (shell-quote-argument (string-join path "."))) buffer)
-
         (when field
           (goto-char (point-max))
           (insert "\n")
@@ -210,17 +220,16 @@
           (insert "  ")
           (insert-text-button "Navigate to top" 'action (lambda (_button) (kubedoc-top)))
           (goto-char (point-min)))
-
         (untabify (point-min) (point-max))
         (kubedoc-mode)
         (setq-local kubedoc--buffer-path path)))
-
     (if (with-current-buffer prev-buffer (equal major-mode 'kubedoc-mode))
         (pop-to-buffer-same-window buffer)
       (pop-to-buffer buffer))))
 
 (defun kubedoc--resource-path-canonical (resource &rest field)
-  ""
+  "Return canonical path for Kubernetes (RESOURCE) and optionally (FIELD).
+Paths are suffixed with a `/' if they contain any child fields."
   (let* ((path (string-join (append (list resource) field) "/"))
          (path-trailing-slash (concat path "/")))
     (if (kubedoc--completion-table path-trailing-slash) path-trailing-slash path)))
@@ -230,7 +239,7 @@
 
 ;;;###autoload
 (defun kubedoc ()
-  "Kubernetes API documentation for (RESOURCE)."
+  "Kubernetes API documentation."
   (interactive)
   (let* ((current-path (if-let ((current kubedoc--buffer-path))
                            (apply #'kubedoc--resource-path-canonical current)
@@ -242,14 +251,14 @@
 
 
 (defun kubedoc-up ()
-  "Navigate to the parent field of the current resource."
+  "Navigate to parent field of current Kubernetes resource."
   (interactive)
   (let ((parts (buffer-local-value 'kubedoc--buffer-path (current-buffer))))
     (when (> (length parts) 1)
       (apply #'kubedoc--view-resource (butlast kubedoc--buffer-path)))))
 
 (defun kubedoc-top ()
-  "Navigate to the top of the current resource."
+  "Navigate to top of current Kubernetes resource."
   (interactive)
   (let ((parts (buffer-local-value 'kubedoc--buffer-path (current-buffer))))
     (when (> (length parts) 1)
@@ -263,7 +272,7 @@
 
 ;;;; Mode
 (define-derived-mode kubedoc-mode special-mode "kubedoc"
-  ""
+  "Major mode for displaying Kubernetes api documentation."
   (setq buffer-auto-save-file-name nil
         truncate-lines t
         buffer-read-only t
