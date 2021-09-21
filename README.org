@@ -1,0 +1,16 @@
+#+TITLE: kubedoc.el - Kubernetes API Documentation
+
+#+ATTR_ORG: :width 1000
+[[https://github.com/r0bobo/kubedoc.el/blob/main/screenshot.png?raw=true]]
+
+* Introduction
+
+kubedoc.el provides Kubernetes API documentation in Emacs.
+
+The documentation is fetched from a live cluster with =kubectl explain= so it also displays documentation for any installed Custom Resource Definitions.
+
+* Usage
+
+#+begin_src
+M-x kubedoc
+#+end_src
