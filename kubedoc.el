@@ -4,7 +4,7 @@
 ;;
 ;; Author: Dean Lindqvist Todevski <https://github.com/r0bobo>
 ;; Maintainer: Dean Lindqvist Todevski
-;; Keywords: docs help tools
+;; Keywords: docs help k8s kubernetes tools
 ;; Version: 1.0
 ;; Homepage: https://github.com/r0bobo/kubedoc.el/
 ;; Package-Requires: ((emacs "27.1"))
