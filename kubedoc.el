@@ -71,7 +71,7 @@
 ;;;; Commands
 
 (defun kubedoc--imenu-goto-field (_name position)
-  "Jump to correctly indented field (POSITION)."
+  "Jump to correctly indented field POSITION."
   (goto-char (+ position 3)))
 
 (defun kubedoc--highlight-field-links ()
@@ -84,7 +84,7 @@
      'kubectl-section (match-string 1))))
 
 (defun kubedoc--field-button-function (button)
-  "Follow field link in (BUTTON)."
+  "Follow field link in BUTTON."
   (with-current-buffer (current-buffer)
     (let ((field (button-get button 'kubectl-section)))
       (apply #'kubedoc--view-resource (append kubedoc--buffer-path (list field))))))
@@ -98,12 +98,12 @@
      "kubectl api-resources --cached --output name") nil t)))
 
 (defun kubedoc--default-field-completion-source-function (resource)
-  "Field completions for (RESOURCE) using shell command `kubectl explain'."
+  "Field completions for RESOURCE using shell command `kubectl explain'."
   (shell-command-to-string
    (concat "kubectl explain --recursive " (shell-quote-argument resource))))
 
 (defun kubedoc--field-completion-table (resource)
-  "Completion candidate list for all fields of Kubernetes (RESOURCE)."
+  "Completion candidate list for all fields of Kubernetes RESOURCE."
   (let* ((res '())
          (path '())
          (prev-indent 0)
@@ -143,7 +143,7 @@
     (mapcar (lambda (e) (concat resource "/" e)) res)))
 
 (defun kubedoc--field-completion-table-cached (resource)
-  "Cached Completion candidate list for all fields of Kubernetes (RESOURCE)."
+  "Cached Completion candidate list for all fields of Kubernetes RESOURCE."
   (let ((cached (cdr (assoc resource kubedoc--field-completion-table-cache))))
     (if (null cached)
         (let ((all (kubedoc--field-completion-table resource)))
@@ -152,8 +152,8 @@
       cached)))
 
 (defun kubedoc--completion-table (path)
-  "Completion candidate list for given Kubernetes resource and field (PATH).
-\(PATH) is a filesystem style path such as `pods/spec/containers'"
+  "Completion candidate list for given Kubernetes resource and field PATH.
+PATH is a filesystem style path such as pods/spec/containers"
   (let* ((string-parts (split-string path "/+"))
          (resource (car string-parts)))
     (if (= (length string-parts) 1)
@@ -174,7 +174,7 @@
        #'string-equal))))
 
 (defun kubedoc--completion-sort (collection)
-  "Completion candidate list sorting of (COLLECTION).
+  "Completion candidate list sorting of COLLECTION.
 Sorts alphabetically with parent fields on top."
   (seq-sort
    (lambda (a b)
@@ -187,7 +187,7 @@ Sorts alphabetically with parent fields on top."
 
 (defun kubedoc--completion-function (string pred action)
   "Completion for Kubernetes API resources.
-See argument (STRING) (PRED) (ACTION) descriptions in command `complete-with-action'."
+See argument STRING PRED ACTION descriptions in command `try-completion'."
   (cond
    ((eq action 'metadata)
     '(metadata (category . kubedoc)
@@ -206,7 +206,7 @@ See argument (STRING) (PRED) (ACTION) descriptions in command `complete-with-act
       (complete-with-action action (kubedoc--completion-table string) candidate pred)))))
 
 (defun kubedoc--view-resource (resource &rest field)
-  "Display Kubernetes api documentation for (RESOURCE) and optionally (FIELD)."
+  "Display Kubernetes api documentation for RESOURCE and optionally FIELD."
   (let* ((path (append (list resource) field))
          (prev-buffer (current-buffer))
          (buffer (concat "*Kubernetes Docs <" (string-join path "/") ">*")))
@@ -228,7 +228,7 @@ See argument (STRING) (PRED) (ACTION) descriptions in command `complete-with-act
       (pop-to-buffer buffer))))
 
 (defun kubedoc--resource-path-canonical (resource &rest field)
-  "Return canonical path for Kubernetes (RESOURCE) and optionally (FIELD).
+  "Return canonical path for Kubernetes RESOURCE and optionally FIELD.
 Paths are suffixed with a `/' if they contain any child fields."
   (let* ((path (string-join (append (list resource) field) "/"))
          (path-trailing-slash (concat path "/")))
