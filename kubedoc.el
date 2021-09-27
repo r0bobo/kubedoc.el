@@ -83,6 +83,16 @@
      'type 'kubedoc-field
      'kubectl-section (match-string 1))))
 
+(defun kubedoc--kubectl-command (&rest args)
+  "Run kubectl with ARGS and return output as string."
+  (with-temp-buffer
+    (let* ((command (string-join (append '("kubectl") (seq-map #'shell-quote-argument args)) " "))
+           (returncode (call-process-shell-command command nil t))
+           (output (buffer-substring (point-min) (point-max))))
+      (if (zerop returncode)
+          output
+        (user-error (string-trim output))))))
+
 (defun kubedoc--field-button-function (button)
   "Follow field link in BUTTON."
   (with-current-buffer (current-buffer)
@@ -94,13 +104,11 @@
   (mapcar
    (lambda (e) (concat e "/"))
    (split-string
-    (shell-command-to-string
-     "kubectl api-resources --cached --output name") nil t)))
+    (kubedoc--kubectl-command "api-resources" "--cached" "--output" "name") nil t)))
 
 (defun kubedoc--default-field-completion-source-function (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
-  (shell-command-to-string
-   (concat "kubectl explain --recursive " (shell-quote-argument resource))))
+  (kubedoc--kubectl-command "explain" "--recursive" resource))
 
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
@@ -212,7 +220,7 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
          (buffer (concat "*Kubernetes Docs <" (string-join path "/") ">*")))
     (unless (get-buffer buffer)
       (with-current-buffer (get-buffer-create buffer)
-        (shell-command (concat "kubectl explain " (shell-quote-argument (string-join path "."))) buffer)
+        (insert (kubedoc--kubectl-command "explain" (string-join path ".")))
         (when field
           (goto-char (point-max))
           (insert "\n")
