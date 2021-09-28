@@ -283,10 +283,9 @@ Paths are suffixed with a `/' if they contain any child fields."
   "Major mode for displaying Kubernetes api documentation."
   (setq buffer-auto-save-file-name nil
         truncate-lines t
-        buffer-read-only t
         font-lock-defaults '((kubedoc-font-lock-defaults))
         imenu-generic-expression kubedoc-imenu-generic-expression)
-  (buffer-disable-undo)
+  (view-mode)
   (auto-fill-mode -1)
   (kubedoc--highlight-field-links)
   (goto-char (point-min)))
