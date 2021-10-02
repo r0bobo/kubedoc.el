@@ -9,6 +9,12 @@ kubedoc.el provides Kubernetes API documentation in Emacs.
 
 The documentation is fetched from a live cluster with =kubectl explain= so it also displays documentation for any installed Custom Resource Definitions.
 
+* Installation
+
+kubedoc.el is available on MELPA.
+
+After [[https://melpa.org/#/getting-started][setting MELPA up]] =kubedoc= can be installed with =M-x package-install= or your package manager of choice.
+
 * Usage
 
 #+begin_src
