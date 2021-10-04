@@ -153,11 +153,14 @@
 (defun kubedoc--field-completion-table-cached (resource)
   "Cached Completion candidate list for all fields of Kubernetes RESOURCE."
   (let ((cached (cdr (assoc resource kubedoc--field-completion-table-cache))))
-    (if (null cached)
-        (let ((all (kubedoc--field-completion-table resource)))
-          (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
-          all)
-      cached)))
+    (cond
+     ((null cached)
+      (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
+        (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
+        all)
+      cached)
+     ((eq cached 'none) nil)
+     (t cached))))
 
 (defun kubedoc--completion-table (path)
   "Completion candidate list for given Kubernetes resource and field PATH.
