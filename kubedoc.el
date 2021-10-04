@@ -62,6 +62,10 @@
 
 (defvar kubedoc--field-completion-source-function nil)
 
+(defvar kubedoc-resource-filter '("\\.metrics\\.k8s\\.io")
+  "Resources to ignore in completion.
+For example Aggregated APIs with no docs.")
+
 (define-button-type 'kubedoc-field
   'follow-link t
   'help-echo "mouse-2, RET: display this section"
@@ -101,10 +105,13 @@
 
 (defun kubedoc--resource-completion-table ()
   "Completion candidate list for all known Kubernetes resources in the cluster."
-  (mapcar
-   (lambda (e) (concat e "/"))
-   (split-string
-    (kubedoc--kubectl-command "api-resources" "--cached" "--output" "name") nil t)))
+  (seq-filter
+   (lambda (e)
+     (seq-every-p (lambda (regex) (not (string-match-p regex e))) kubedoc-resource-filter))
+   (mapcar
+    (lambda (e) (concat e "/"))
+    (split-string
+     (kubedoc--kubectl-command "api-resources" "--cached" "--output" "name") nil t))))
 
 (defun kubedoc--default-field-completion-source-function (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
