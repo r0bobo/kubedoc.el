@@ -105,13 +105,19 @@ For example Aggregated APIs with no docs.")
     (let ((field (button-get button 'kubectl-section)))
       (apply #'kubedoc--view-resource (append kubedoc--buffer-path (list field))))))
 
+(defun kubedoc--create-resource-without-api-group (resource)
+  "Takes only the first resource level name from a given resource.
+Example: Takes a `certificaterequests.certmanager.k8s.io` and returns
+`certificaterequests/`."
+  (concat (car (split-string resource "\\.")) "/"))
+
 (defun kubedoc--resource-completion-table ()
   "Completion candidate list for all known Kubernetes resources in the cluster."
   (seq-filter
    (lambda (e)
      (seq-every-p (lambda (regex) (not (string-match-p regex e))) kubedoc-resource-filter))
    (mapcar
-    (lambda (e) (concat e "/"))
+    'kubedoc--create-resource-without-api-group
     (split-string
      (kubedoc--kubectl-command "api-resources" "--output" "name") nil t))))
 
