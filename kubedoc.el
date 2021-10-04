@@ -58,6 +58,8 @@
 
 (defvar kubedoc--field-completion-table-cache nil)
 
+(defvar kubedoc--resource-completion-table-cache nil)
+
 (defvar-local kubedoc--buffer-path nil)
 
 (defvar kubedoc--field-completion-source-function nil)
@@ -111,7 +113,13 @@ For example Aggregated APIs with no docs.")
    (mapcar
     (lambda (e) (concat e "/"))
     (split-string
-     (kubedoc--kubectl-command "api-resources" "--cached" "--output" "name") nil t))))
+     (kubedoc--kubectl-command "api-resources" "--output" "name") nil t))))
+
+(defun kubedoc--resource-completion-table-cached ()
+  "Cached completion candidate list for all known Kubernetes resources in the cluster."
+  (when (null kubedoc--resource-completion-table-cache)
+    (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table)))
+  kubedoc--resource-completion-table-cache)
 
 (defun kubedoc--default-field-completion-source-function (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
@@ -178,7 +186,7 @@ PATH is a filesystem style path such as pods/spec/containers"
         (seq-filter
          (lambda (e)
            (string-prefix-p path e))
-         (kubedoc--resource-completion-table))
+         (kubedoc--resource-completion-table-cached))
       (seq-uniq
        (mapcar
         (lambda (e)
