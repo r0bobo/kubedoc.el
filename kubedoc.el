@@ -293,7 +293,8 @@ Paths are suffixed with a `/' if they contain any child fields."
 (defun kubedoc-invalidate-cache ()
   "Invalidate kubedoc completion cache."
   (interactive)
-  (setq kubedoc--field-completion-table-cache nil))
+  (setq kubedoc--field-completion-table-cache nil)
+  (setq kubedoc--resource-completion-table-cache nil))
 
 
 ;;;; Mode
