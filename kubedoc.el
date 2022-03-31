@@ -93,7 +93,7 @@ For example Aggregated APIs with no docs.")
   "Run kubectl with ARGS and return output as string."
   (with-temp-buffer
     (let* ((command (string-join (append '("kubectl") (seq-map #'shell-quote-argument args)) " "))
-           (returncode (call-process-shell-command command nil t))
+           (returncode (call-process-shell-command command nil '(t nil)))
            (output (buffer-substring (point-min) (point-max))))
       (if (zerop returncode)
           output
