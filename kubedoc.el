@@ -306,6 +306,7 @@ Paths are suffixed with a `/' if they contain any child fields."
         imenu-generic-expression kubedoc-imenu-generic-expression)
   (view-mode)
   (auto-fill-mode -1)
+  (goto-char (point-min))
   (kubedoc--highlight-field-links)
   (goto-char (point-min)))
 
