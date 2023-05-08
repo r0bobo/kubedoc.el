@@ -10,8 +10,7 @@
 
 (load-file "kubedoc.el")
 
-(defun kubedoc-tests-completion-function (_resource)
-  "Mocked completion table without calling any Kubernetes api server."
+(defconst kubedoc-tests--openapiv2-raw
   "KIND:     ConfigMap
 VERSION:  v1
 
@@ -26,7 +25,6 @@ FIELDS:
    kind	<string>
    metadata	<Object>
       annotations	<map[string]string>
-      clusterName	<string>
       creationTimestamp	<string>
       deletionGracePeriodSeconds	<integer>
       deletionTimestamp	<string>
@@ -40,6 +38,7 @@ FIELDS:
          fieldsV1	<map[string]>
          manager	<string>
          operation	<string>
+         subresource	<string>
          time	<string>
       name	<string>
       namespace	<string>
@@ -55,53 +54,148 @@ FIELDS:
       uid	<string>
 ")
 
-(defmacro kubedoc-tests-fixture (&rest body)
-  "Run test (BODY) with mocks."
+(defconst kubedoc-tests--openapiv2-parsed
+  '("apiVersion"
+    "binaryData"
+    "data"
+    "immutable"
+    "kind"
+    "metadata/annotations"
+    "metadata/creationTimestamp"
+    "metadata/deletionGracePeriodSeconds"
+    "metadata/deletionTimestamp"
+    "metadata/finalizers"
+    "metadata/generateName"
+    "metadata/generation"
+    "metadata/labels"
+    "metadata/managedFields/apiVersion"
+    "metadata/managedFields/fieldsType"
+    "metadata/managedFields/fieldsV1"
+    "metadata/managedFields/manager"
+    "metadata/managedFields/operation"
+    "metadata/managedFields/subresource"
+    "metadata/managedFields/time"
+    "metadata/name"
+    "metadata/namespace"
+    "metadata/ownerReferences/apiVersion"
+    "metadata/ownerReferences/blockOwnerDeletion"
+    "metadata/ownerReferences/controller"
+    "metadata/ownerReferences/kind"
+    "metadata/ownerReferences/name"
+    "metadata/ownerReferences/uid"
+    "metadata/resourceVersion"
+    "metadata/selfLink"
+    "metadata/uid"))
+
+(defconst kubedoc-tests--openapiv3-raw
+  "KIND:       ConfigMap
+VERSION:    v1
+
+DESCRIPTION:
+    ConfigMap holds configuration data for pods to consume.
+
+FIELDS:
+  apiVersion	<string>
+  binaryData	<map[string]string>
+  data	<map[string]string>
+  immutable	<boolean>
+  kind	<string>
+  metadata	<ObjectMeta>
+    annotations	<map[string]string>
+    creationTimestamp	<string>
+    deletionGracePeriodSeconds	<integer>
+    deletionTimestamp	<string>
+    finalizers	<[]string>
+    generateName	<string>
+    generation	<integer>
+    labels	<map[string]string>
+    managedFields	<[]ManagedFieldsEntry>
+      apiVersion	<string>
+      fieldsType	<string>
+      fieldsV1	<FieldsV1>
+      manager	<string>
+      operation	<string>
+      subresource	<string>
+      time	<string>
+    name	<string>
+    namespace	<string>
+    ownerReferences	<[]OwnerReference>
+      apiVersion	<string> -required-
+      blockOwnerDeletion	<boolean>
+      controller	<boolean>
+      kind	<string> -required-
+      name	<string> -required-
+      uid	<string> -required-
+    resourceVersion	<string>
+    selfLink	<string>
+    uid	<string>
+
+
+")
+
+(defconst kubedoc-tests--openapiv3-parsed
+  '("apiVersion"
+    "binaryData"
+    "data"
+    "immutable"
+    "kind"
+    "metadata/annotations"
+    "metadata/creationTimestamp"
+    "metadata/deletionGracePeriodSeconds"
+    "metadata/deletionTimestamp"
+    "metadata/finalizers"
+    "metadata/generateName"
+    "metadata/generation"
+    "metadata/labels"
+    "metadata/managedFields/apiVersion"
+    "metadata/managedFields/fieldsType"
+    "metadata/managedFields/fieldsV1"
+    "metadata/managedFields/manager"
+    "metadata/managedFields/operation"
+    "metadata/managedFields/subresource"
+    "metadata/managedFields/time"
+    "metadata/name"
+    "metadata/namespace"
+    "metadata/ownerReferences/apiVersion"
+    "metadata/ownerReferences/blockOwnerDeletion"
+    "metadata/ownerReferences/controller"
+    "metadata/ownerReferences/kind"
+    "metadata/ownerReferences/name"
+    "metadata/ownerReferences/uid"
+    "metadata/resourceVersion"
+    "metadata/selfLink"
+    "metadata/uid"))
+
+(defmacro kubedoc-tests-fixture (mock-fun &rest body)
+  "Run test (BODY) with (MOCK-FUN) as kubedoc--field-completion-source-function."
   `(unwind-protect
-      (progn (setq kubedoc--field-completion-source-function #'kubedoc-tests-completion-function)
+      (progn (setq kubedoc--field-completion-source-function ,mock-fun)
              ,@body)
     (setq kubedoc--field-completion-source-function nil)))
 
-(ert-deftest kubedoc-tests--resorce-path-canonical ()
+(ert-deftest kubedoc-tests--parse-kubectl-explain-fields/openapiv2 ()
+  (should
+   (seq-set-equal-p
+    (kubedoc--parse-kubectl-explain-fields kubedoc-tests--openapiv2-raw)
+    kubedoc-tests--openapiv2-parsed)))
+
+(ert-deftest kubedoc-tests--parse-kubectl-explain-fields/openapiv3 ()
+  (should
+   (seq-set-equal-p
+    (kubedoc--parse-kubectl-explain-fields kubedoc-tests--openapiv3-raw)
+    kubedoc-tests--openapiv3-parsed)))
+
+(ert-deftest kubedoc-tests--resorce-path-canonical/openapiv2 ()
   (kubedoc-tests-fixture
+   #'(lambda (_) kubedoc-tests--openapiv2-raw)
    (should (string= (kubedoc--resource-path-canonical "configmaps" "metadata") "configmaps/metadata/"))
    (should (string= (kubedoc--resource-path-canonical "configmaps" "kind") "configmaps/kind"))))
 
-(ert-deftest kubedoc-tests--field-completion-table ()
+(ert-deftest kubedoc-tests--resorce-path-canonical/openapiv3 ()
   (kubedoc-tests-fixture
-   (should (seq-set-equal-p
-            (kubedoc--field-completion-table "configmap")
-            (reverse '("configmap/apiVersion"
-                       "configmap/binaryData"
-                       "configmap/data"
-                       "configmap/immutable"
-                       "configmap/kind"
-                       "configmap/metadata/annotations"
-                       "configmap/metadata/clusterName"
-                       "configmap/metadata/creationTimestamp"
-                       "configmap/metadata/deletionGracePeriodSeconds"
-                       "configmap/metadata/deletionTimestamp"
-                       "configmap/metadata/finalizers"
-                       "configmap/metadata/generateName"
-                       "configmap/metadata/generation"
-                       "configmap/metadata/labels"
-                       "configmap/metadata/managedFields/apiVersion"
-                       "configmap/metadata/managedFields/fieldsType"
-                       "configmap/metadata/managedFields/fieldsV1"
-                       "configmap/metadata/managedFields/manager"
-                       "configmap/metadata/managedFields/operation"
-                       "configmap/metadata/managedFields/time"
-                       "configmap/metadata/name"
-                       "configmap/metadata/namespace"
-                       "configmap/metadata/ownerReferences/apiVersion"
-                       "configmap/metadata/ownerReferences/blockOwnerDeletion"
-                       "configmap/metadata/ownerReferences/controller"
-                       "configmap/metadata/ownerReferences/kind"
-                       "configmap/metadata/ownerReferences/name"
-                       "configmap/metadata/ownerReferences/uid"
-                       "configmap/metadata/resourceVersion"
-                       "configmap/metadata/selfLink"
-                       "configmap/metadata/uid"))))))
+   #'(lambda (_) kubedoc-tests--openapiv3-raw)
+   (should (string= (kubedoc--resource-path-canonical "configmaps" "metadata") "configmaps/metadata/"))
+   (should (string= (kubedoc--resource-path-canonical "configmaps" "kind") "configmaps/kind"))))
 
 (ert-deftest kubedoc-tests--completion-sort ()
   (should (equal
