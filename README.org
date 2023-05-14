@@ -1,6 +1,7 @@
 #+TITLE: kubedoc.el - Kubernetes API Documentation
 
 [[https://melpa.org/#/kubedoc][file:https://melpa.org/packages/kubedoc-badge.svg]]
+[[https://github.com/r0bobo/kubedoc.el/actions][file:https://github.com/r0bobo/kubedoc.el/actions/workflows/test.yaml/badge.svg]]
 
 #+ATTR_ORG: :width 1000
 [[https://github.com/r0bobo/kubedoc.el/blob/main/screenshot.png?raw=true]]
