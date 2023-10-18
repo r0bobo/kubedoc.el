@@ -50,8 +50,8 @@
 
 (defconst kubedoc-font-lock-defaults
   `(("^GROUP\\|^KIND\\|^VERSION\\|^RESOURCE\\|^DESCRIPTION\\|^FIELDS?" . font-lock-keyword-face)
-   (,kubedoc--explain-field-regex 3 font-lock-comment-face)
-   ("-required-" . font-lock-function-name-face)))
+    (,kubedoc--explain-field-regex 3 font-lock-comment-face)
+    ("-required-" . font-lock-function-name-face)))
 
 (defvar kubedoc-mode-map
   (let ((map (make-sparse-keymap)))
@@ -223,7 +223,7 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
   (cond
    ((eq action 'metadata)
     '(metadata (category . kubedoc)
-               (display-sort-function . kubedoc--completion-sort)))
+      (display-sort-function . kubedoc--completion-sort)))
 
    ((eq (car-safe action) 'boundaries)
     (let* ((start (length (file-name-directory string)))
