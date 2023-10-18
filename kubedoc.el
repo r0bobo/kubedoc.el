@@ -63,6 +63,8 @@
 
 (defvar kubedoc--resource-completion-table-cache nil)
 
+(defvar kubedoc--current-context nil)
+
 (defvar-local kubedoc--buffer-path nil)
 
 (defvar kubedoc--field-completion-source-function nil)
@@ -95,6 +97,8 @@ For example Aggregated APIs with no docs.")
 (defun kubedoc--kubectl-command (&rest args)
   "Run kubectl with ARGS and return output as string."
   (with-temp-buffer
+    (when kubedoc--current-context
+      (push (concat "--context=" kubedoc--current-context) args))
     (let* ((command (string-join (append '("kubectl") (seq-map #'shell-quote-argument args)) " "))
            (returncode (call-process-shell-command command nil '(t nil)))
            (output (buffer-substring (point-min) (point-max))))
@@ -237,6 +241,13 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
              (string-remove-prefix (or (file-name-directory string) "") string))))
       (complete-with-action action (kubedoc--completion-table string) candidate pred)))))
 
+(defun kubedoc--kubectl-contexts ()
+  "List available kubectl conctexts."
+  (sort
+   (split-string
+    (kubedoc--kubectl-command "config" "get-contexts" "--output=name"))
+   #'string<))
+
 (defun kubedoc--view-resource (resource &rest field)
   "Display Kubernetes api documentation for RESOURCE and optionally FIELD."
   (let* ((path (append (list resource) field))
@@ -272,7 +283,8 @@ Paths are suffixed with a `/' if they contain any child fields."
 
 ;;;###autoload
 (defun kubedoc ()
-  "Kubernetes API documentation."
+  "Show Kubernetes API documentation.
+Uses current context."
   (interactive)
   (let* ((current-path (if-let ((current kubedoc--buffer-path))
                            (apply #'kubedoc--resource-path-canonical current)
@@ -282,6 +294,12 @@ Paths are suffixed with a `/' if they contain any child fields."
                 nil nil current-path)))
     (apply #'kubedoc--view-resource (split-string (string-trim-right path "/+") "/"))))
 
+(defun kubedoc-for-context ()
+  "Show Kubernetes API documentation.
+Prompts for changing current context."
+  (interactive)
+  (kubedoc-set-context)
+  (kubedoc))
 
 (defun kubedoc-up ()
   "Navigate to parent field of current Kubernetes resource."
@@ -296,6 +314,16 @@ Paths are suffixed with a `/' if they contain any child fields."
   (let ((parts (buffer-local-value 'kubedoc--buffer-path (current-buffer))))
     (when (> (length parts) 1)
       (apply #'kubedoc--view-resource (list (car kubedoc--buffer-path))))))
+
+(defun kubedoc-set-context ()
+  "Set current kubeconfig context."
+  (interactive)
+  (let* ((contexts (kubedoc--kubectl-contexts))
+         (context (completing-read "Kubernetes context: " contexts)))
+    ;; Invalidate cache if context is changed
+    (unless (string= context kubedoc--current-context)
+      (kubedoc-invalidate-cache))
+    (setq kubedoc--current-context context)))
 
 (defun kubedoc-invalidate-cache ()
   "Invalidate kubedoc completion cache."
