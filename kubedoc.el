@@ -136,8 +136,8 @@ in the cluster."
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
   (let* ((explain-output
-          (funcall(or kubedoc--field-completion-source-function
-                      #'kubedoc--default-field-completion-source-function) resource))
+          (funcall (or kubedoc--field-completion-source-function
+                       #'kubedoc--default-field-completion-source-function) resource))
          (resources (kubedoc--parse-kubectl-explain-fields explain-output)))
     (mapcar (lambda (e) (concat resource "/" e)) resources)))
 
@@ -163,7 +163,7 @@ Supports both OpenAPI v2 and v3 schema."
             (push field path)
             (push (string-join (reverse path) "/") result)))))
     ;; Filter result so that every result
-    ;; ends with the leaft field of each hierarchy.
+    ;; ends with the left field of each hierarchy.
     ;; If the result contains '("kind" "metadata" "metadata/labels")
     ;; the result should be '("kind" "metadata/labels")
     (reverse
