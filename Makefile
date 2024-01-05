@@ -1,2 +1,13 @@
+all: test lint compile doctor
+
 test:
-	@emacs -batch -l ert -l kubedoc-tests.el -f ert-run-tests-batch-and-exit
+	eldev test
+
+lint:
+	eldev lint
+
+compile:
+	eldev compile --warnings-as-errors
+
+doctor:
+	eldev doctor

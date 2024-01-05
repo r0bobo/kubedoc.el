@@ -2,7 +2,11 @@ name: Test
 
 on:
   pull_request:
+    branches:
+      - "*"
   push:
+    branches:
+      - "master"
 
 jobs:
   build:
@@ -14,12 +18,28 @@ jobs:
           - 27.2
           - 28.1
           - 28.2
+          - 29.1
           - snapshot
     steps:
-      - uses: purcell/setup-emacs@master
+      - name: Setup Emacs
+        uses: purcell/setup-emacs@master
         with:
           version: ${{ matrix.emacs_version }}
 
-      - uses: actions/checkout@v3
-      - name: Run tests
-        run: "make test"
+      - name: Setup Eldev
+        uses: emacs-eldev/setup-eldev@v1
+
+      - name: Checkout source code
+        uses: actions/checkout@v3
+
+      - name: eldev/test
+        run: eldev --color=always --debug --packaged --time --verbose test
+
+      - name: eldev/compile
+        run: eldev --color=always --debug --packaged --time --verbose compile --warnings-as-errors
+
+      - name: eldev/lint
+        run: eldev --color=always --debug --packaged --time --verbose lint
+
+      - name: eldev/doctor
+        run: eldev --color=always --debug --packaged --time --verbose doctor
