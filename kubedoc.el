@@ -113,7 +113,6 @@ For example Aggregated APIs with no docs.")
       (apply #'kubedoc--view-resource (append kubedoc--buffer-path (list field))))))
 
 (defun kubedoc--resource-completion-table ()
-  "Completion candidate list for all known Kubernetes resources in the cluster."
   (seq-filter
    (lambda (e)
      (seq-every-p (lambda (regex) (not (string-match-p regex e))) kubedoc-resource-filter))
@@ -121,10 +120,10 @@ For example Aggregated APIs with no docs.")
     (lambda (e) (concat e "/"))
     (split-string
      (kubedoc--kubectl-command "api-resources" "--output" "name") nil t))))
+  "Completion candidate list for Kubernetes resources in the cluster."
 
 (defun kubedoc--resource-completion-table-cached ()
-  "Cached completion candidate list for all known Kubernetes resources
-in the cluster."
+  "Cached completion candidate list for Kubernetes resources in the cluster."
   (when (null kubedoc--resource-completion-table-cache)
     (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table)))
   kubedoc--resource-completion-table-cache)
