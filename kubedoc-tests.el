@@ -10,6 +10,9 @@
 
 (load-file "kubedoc.el")
 
+;; Make sure kubectl does not have valid config.
+(setenv "KUBECONFIG" "/dev/null")
+
 (defconst kubedoc-tests--openapiv2-raw
   "KIND:     ConfigMap
 VERSION:  v1
@@ -169,9 +172,9 @@ FIELDS:
 (defmacro kubedoc-tests-fixture (mock-fun &rest body)
   "Run test (BODY) with (MOCK-FUN) as kubedoc--field-completion-source-function."
   `(unwind-protect
-      (progn (setq kubedoc--field-completion-source-function ,mock-fun)
-             ,@body)
-    (setq kubedoc--field-completion-source-function nil)))
+       (progn (setq kubedoc--field-completion-source-function ,mock-fun)
+              ,@body)
+     (setq kubedoc--field-completion-source-function nil)))
 
 (ert-deftest kubedoc-tests--parse-kubectl-explain-fields/openapiv2 ()
   (should
