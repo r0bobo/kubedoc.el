@@ -1,2 +1,8 @@
 *.el#
 *.elc
+
+# Added automatically by ‘eldev init’.
+/.eldev
+/Eldev-local
+
+/kubedoc-autoloads.el
