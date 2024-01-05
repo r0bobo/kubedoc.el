@@ -1,6 +1,6 @@
 ;;; kubedoc.el --- Kubernetes API Documentation -*- lexical-binding: t; -*-
 ;;
-;; Copyright (C) 2021 Dean Lindqvist Todevski
+;; Copyright (C) 2021, 2024 Dean Lindqvist Todevski
 ;;
 ;; Author: Dean Lindqvist Todevski <https://github.com/r0bobo>
 ;; Maintainer: Dean Lindqvist Todevski

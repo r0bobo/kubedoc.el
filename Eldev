@@ -1,8 +1,9 @@
-; -*- mode: emacs-lisp; lexical-binding: t -*-
+;; -*- mode: emacs-lisp; lexical-binding: t -*-
 
 ;; Uncomment some calls below as needed for your project.
-;(eldev-use-package-archive 'gnu-elpa)
-;(eldev-use-package-archive 'nongnu-elpa)
-;(eldev-use-package-archive 'melpa)
+;;(eldev-use-package-archive 'gnu-elpa)
+;;(eldev-use-package-archive 'nongnu-elpa)
+;;(eldev-use-package-archive 'melpa)
 
 (eldev-use-plugin 'autoloads)
+(eldev-use-plugin 'maintainer)
