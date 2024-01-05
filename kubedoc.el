@@ -113,6 +113,7 @@ For example Aggregated APIs with no docs.")
       (apply #'kubedoc--view-resource (append kubedoc--buffer-path (list field))))))
 
 (defun kubedoc--resource-completion-table ()
+  "Completion candidate list for Kubernetes resources in the cluster."
   (seq-filter
    (lambda (e)
      (seq-every-p (lambda (regex) (not (string-match-p regex e))) kubedoc-resource-filter))
@@ -120,7 +121,6 @@ For example Aggregated APIs with no docs.")
     (lambda (e) (concat e "/"))
     (split-string
      (kubedoc--kubectl-command "api-resources" "--output" "name") nil t))))
-  "Completion candidate list for Kubernetes resources in the cluster."
 
 (defun kubedoc--resource-completion-table-cached ()
   "Cached completion candidate list for Kubernetes resources in the cluster."
@@ -141,13 +141,13 @@ For example Aggregated APIs with no docs.")
     (mapcar (lambda (e) (concat resource "/" e)) resources)))
 
 (defun kubedoc--parse-kubectl-explain-fields (input)
-  "Parse INPUT (output from `kubectl explain --recursive') and return list of all
-field paths for given resource.
+  "Parse INPUT and return list of all field paths for given resource.
+INPUT is output from `kubectl explain --recursive'.
 Supports both OpenAPI v2 and v3 schema."
   (let ((result '())
         (path '())
         (base -1)
-        (lines (split-string input "\\\n" t)))
+        (lines (split-string input "\n" t)))
     (dolist (line lines)
       (when (string-match kubedoc--explain-field-regex line)
         (let* ((depth (length (match-string 1 line)))
