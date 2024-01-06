@@ -13,6 +13,9 @@
 ;; Make sure kubectl does not have valid config.
 (setenv "KUBECONFIG" "/dev/null")
 
+;; Disable caching during tests
+(setq kubedoc-cache-enabled nil)
+
 (defconst kubedoc-tests--openapiv2-raw
   "KIND:     ConfigMap
 VERSION:  v1
