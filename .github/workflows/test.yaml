@@ -30,7 +30,7 @@ jobs:
         uses: emacs-eldev/setup-eldev@v1
 
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: eldev/test
         run: eldev --color=always --debug --packaged --time --verbose test
