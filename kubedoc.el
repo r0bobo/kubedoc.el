@@ -108,6 +108,17 @@ For example Aggregated APIs with no docs.")
           output
         (user-error (string-trim output))))))
 
+(defun kubedoc--kubectl-explain-resource (resource)
+  "Field completions for RESOURCE using shell command `kubectl explain'."
+  (kubedoc--kubectl-command "explain" "--recursive" resource))
+
+(defun kubedoc--kubectl-contexts ()
+  "List available kubectl conctexts."
+  (sort
+   (split-string
+    (kubedoc--kubectl-command "config" "get-contexts" "--output=name"))
+   #'string<))
+
 (defun kubedoc--field-button-function (button)
   "Follow field link in BUTTON."
   (with-current-buffer (current-buffer)
@@ -133,10 +144,6 @@ For example Aggregated APIs with no docs.")
     (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table))
     kubedoc--resource-completion-table-cache)
    (t kubedoc--resource-completion-table-cache)))
-
-(defun kubedoc--kubectl-explain-resource (resource)
-  "Field completions for RESOURCE using shell command `kubectl explain'."
-  (kubedoc--kubectl-command "explain" "--recursive" resource))
 
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
@@ -244,13 +251,6 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
                string
              (string-remove-prefix (or (file-name-directory string) "") string))))
       (complete-with-action action (kubedoc--completion-table string) candidate pred)))))
-
-(defun kubedoc--kubectl-contexts ()
-  "List available kubectl conctexts."
-  (sort
-   (split-string
-    (kubedoc--kubectl-command "config" "get-contexts" "--output=name"))
-   #'string<))
 
 (defun kubedoc--view-resource (resource &rest field)
   "Display Kubernetes api documentation for RESOURCE and optionally FIELD."
