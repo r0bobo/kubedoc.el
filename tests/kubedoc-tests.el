@@ -131,5 +131,15 @@ FIELDS:
        (insert (string-join result "\n"))
        (insert "\n")))))
 
+(ert-deftest parse-kubectl-explain-fields-v2 ()
+  (ert-test-erts-file
+   "tests/data-parse-kubectl-explain-fields.erts"
+   (lambda ()
+     (let ((result (kubedoc--parse-kubectl-explain-fields-2)))
+       (erase-buffer)
+       (point-min)
+       (insert (string-join result "\n"))
+       (insert "\n")))))
+
 (provide 'kubedoc-tests)
 ;;; kubedoc-tests.el ends here

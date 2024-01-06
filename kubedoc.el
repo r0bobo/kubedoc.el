@@ -108,12 +108,21 @@ For example Aggregated APIs with no docs.")
           output
         (user-error (string-trim output))))))
 
+(defun kubedoc--kubectl-command-2 (&rest args)
+  "Run kubectl with ARGS and return output as string."
+  (when kubedoc--current-context
+    (push (concat "--context=" kubedoc--current-context) args))
+  (let* ((command (string-join (append '("kubectl") (seq-map #'shell-quote-argument args)) " "))
+         (returncode (call-process-shell-command command nil '(t nil))))
+    (unless (zerop returncode)
+      (user-error "Kubectl error"))))
+
 (defun kubedoc--kubectl-explain-resource (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
   (kubedoc--kubectl-command "explain" "--recursive" resource))
 
 (defun kubedoc--kubectl-contexts ()
-  "List available kubectl conctexts."
+  "List available kubectl contexts."
   (sort
    (split-string
     (kubedoc--kubectl-command "config" "get-contexts" "--output=name"))
@@ -147,9 +156,11 @@ For example Aggregated APIs with no docs.")
 
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
-  (let* ((explain-output (kubedoc--kubectl-explain-resource resource))
-         (resources (kubedoc--parse-kubectl-explain-fields explain-output)))
-    (mapcar (lambda (e) (concat resource "/" e)) resources)))
+  (with-temp-buffer
+    (kubedoc--kubectl-command-2 "explain" "--recursive" resource)
+    (thread-last
+      (kubedoc--parse-kubectl-explain-fields-2)
+      (seq-map (apply-partially #'format "%s/%s" resource)))))
 
 (defun kubedoc--parse-kubectl-explain-fields (input)
   "Parse INPUT and return list of all field paths for given resource.
@@ -172,6 +183,42 @@ Supports both OpenAPI v2 and v3 schema."
             (setq path (reverse (seq-subseq (reverse path) 0 position)))
             (push field path)
             (push (string-join (reverse path) "/") result)))))
+    ;; Filter result so that every result
+    ;; ends with the left field of each hierarchy.
+    ;; If the result contains '("kind" "metadata" "metadata/labels")
+    ;; the result should be '("kind" "metadata/labels")
+    (reverse
+     (seq-filter
+      (lambda (e1)
+        (not (seq-some
+              (lambda (e2)
+                (string-prefix-p (concat e1 "/") e2))
+              result)))
+      result))))
+
+(defun kubedoc--parse-kubectl-explain-fields-2 ()
+  "Parse INPUT and return list of all field paths for given resource.
+INPUT is output from `kubectl explain --recursive'.
+Supports both OpenAPI v2 and v3 schema."
+  (let ((result '())
+        (path '())
+        (base -1))
+    (goto-char (point-min))
+    (while (not (eobp))
+      (let ((line (thing-at-point 'line)))
+        (when (string-match kubedoc--explain-field-regex line)
+          (let* ((depth (current-indentation))
+                 (field (match-string 2 line)))
+            ;; Set base indention length from first iteration
+            (when (= base -1)
+              (setq base depth))
+            (let ((position (/ (- depth base) base)))
+              ;; Drop all previous path elements that are
+              ;; deeper than the current.
+              (setq path (reverse (seq-subseq (reverse path) 0 position)))
+              (push field path)
+              (push (string-join (reverse path) "/") result)))))
+      (forward-line 1))
     ;; Filter result so that every result
     ;; ends with the left field of each hierarchy.
     ;; If the result contains '("kind" "metadata" "metadata/labels")
