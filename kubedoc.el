@@ -68,8 +68,6 @@
 
 (defvar-local kubedoc--buffer-path nil)
 
-(defvar kubedoc--field-completion-source-function nil)
-
 (defvar kubedoc-resource-filter '("\\.metrics\\.k8s\\.io")
   "Resources to ignore in completion.
 For example Aggregated APIs with no docs.")
@@ -136,15 +134,13 @@ For example Aggregated APIs with no docs.")
     kubedoc--resource-completion-table-cache)
    (t kubedoc--resource-completion-table-cache)))
 
-(defun kubedoc--default-field-completion-source-function (resource)
+(defun kubedoc--kubectl-explain-resource (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
   (kubedoc--kubectl-command "explain" "--recursive" resource))
 
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
-  (let* ((explain-output
-          (funcall (or kubedoc--field-completion-source-function
-                       #'kubedoc--default-field-completion-source-function) resource))
+  (let* ((explain-output (kubedoc--kubectl-explain-resource resource))
          (resources (kubedoc--parse-kubectl-explain-fields explain-output)))
     (mapcar (lambda (e) (concat resource "/" e)) resources)))
 
