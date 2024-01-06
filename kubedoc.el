@@ -74,7 +74,7 @@
   "Resources to ignore in completion.
 For example Aggregated APIs with no docs.")
 
-(defvar kubedoc-cache-enabled nil
+(defvar kubedoc-cache-enabled t
   "Enable kubedoc caching.")
 
 (define-button-type 'kubedoc-field
