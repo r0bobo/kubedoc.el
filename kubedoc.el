@@ -132,7 +132,9 @@ For example Aggregated APIs with no docs.")
    ((not kubedoc-cache-enabled)
     (kubedoc--resource-completion-table))
    ((null kubedoc--resource-completion-table-cache)
-    (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table)))))
+    (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table))
+    kubedoc--resource-completion-table-cache)
+   (t kubedoc--resource-completion-table-cache)))
 
 (defun kubedoc--default-field-completion-source-function (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
@@ -189,8 +191,7 @@ Supports both OpenAPI v2 and v3 schema."
      ((null cached)
       (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
         (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
-        all)
-      cached)
+        all))
      ((eq cached 'none) nil)
      (t cached))))
 
