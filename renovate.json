@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    ":automergeDigest",
+    ":combinePatchMinorReleases",
+    ":dependencyDashboard",
+    ":disableRateLimiting",
+    ":docker",
+    ":enableVulnerabilityAlerts",
+    ":preserveSemverRanges",
+    ":rebaseStalePrs",
+    ":renovatePrefix",
+    "config:best-practices",
+    "docker:enableMajor",
+    "group:kubernetes",
+    "group:linters",
+    "group:recommended",
+    "regexManagers:dockerfileVersions",
+    "regexManagers:githubActionsVersions",
+    "regexManagers:gitlabPipelineVersions",
+    "security:openssf-scorecard",
+    "workarounds:doNotUpgradeFromAlpineStableToEdge"
+  ],
+  "dependencyDashboard": true,
+  "configMigration": true,
+  "platformAutomerge": true,
+  "ignorePrAuthor": true
+}
