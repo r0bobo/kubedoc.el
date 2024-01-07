@@ -133,7 +133,7 @@ Excludes resouces that match regexps in `kubedoc-excluded-resources'."
                                   (not (string-match-p re elt))) kubedoc-excluded-resources))))
     (thread-last
       (split-string (buffer-string) nil t)
-      (seq-filter (apply-partially excluded-resource-p))
+      (seq-filter excluded-resource-p)
       (seq-map (apply-partially #'format "%s/")))))
 
 (defun kubedoc--parse-kubectl-explain-fields ()
@@ -164,14 +164,15 @@ Supports both OpenAPI v2 and v3 schema."
     ;; ends with the left field of each hierarchy.
     ;; If the result contains '("kind" "metadata" "metadata/labels")
     ;; the result should be '("kind" "metadata/labels")
-    (reverse
-     (seq-filter
-      (lambda (e1)
-        (not (seq-some
-              (lambda (e2)
-                (string-prefix-p (concat e1 "/") e2))
-              result)))
-      result))))
+    (let ((full-path-p (lambda (elt)
+                         (thread-last
+                           result
+                           (seq-some (apply-partially #'string-prefix-p (concat elt "/")))
+                           (not)))))
+      (thread-last
+        result
+        (seq-filter full-path-p)
+        (reverse)))))
 
 (defun kubedoc--kubectl-contexts ()
   "List available kubectl contexts."
