@@ -16,120 +16,26 @@
 ;; Disable caching during tests
 (setq kubedoc-cache-enabled nil)
 
-(defconst kubedoc-tests--openapiv2-raw
-  "KIND:     ConfigMap
-VERSION:  v1
-
-DESCRIPTION:
-     ConfigMap holds configuration data for pods to consume.
-
-FIELDS:
-   apiVersion	<string>
-   binaryData	<map[string]string>
-   data	<map[string]string>
-   immutable	<boolean>
-   kind	<string>
-   metadata	<Object>
-      annotations	<map[string]string>
-      creationTimestamp	<string>
-      deletionGracePeriodSeconds	<integer>
-      deletionTimestamp	<string>
-      finalizers	<[]string>
-      generateName	<string>
-      generation	<integer>
-      labels	<map[string]string>
-      managedFields	<[]Object>
-         apiVersion	<string>
-         fieldsType	<string>
-         fieldsV1	<map[string]>
-         manager	<string>
-         operation	<string>
-         subresource	<string>
-         time	<string>
-      name	<string>
-      namespace	<string>
-      ownerReferences	<[]Object>
-         apiVersion	<string>
-         blockOwnerDeletion	<boolean>
-         controller	<boolean>
-         kind	<string>
-         name	<string>
-         uid	<string>
-      resourceVersion	<string>
-      selfLink	<string>
-      uid	<string>
-")
-
-(defconst kubedoc-tests--openapiv3-raw
-  "KIND:       ConfigMap
-VERSION:    v1
-
-DESCRIPTION:
-    ConfigMap holds configuration data for pods to consume.
-
-FIELDS:
-  apiVersion	<string>
-  binaryData	<map[string]string>
-  data	<map[string]string>
-  immutable	<boolean>
-  kind	<string>
-  metadata	<ObjectMeta>
-    annotations	<map[string]string>
-    creationTimestamp	<string>
-    deletionGracePeriodSeconds	<integer>
-    deletionTimestamp	<string>
-    finalizers	<[]string>
-    generateName	<string>
-    generation	<integer>
-    labels	<map[string]string>
-    managedFields	<[]ManagedFieldsEntry>
-      apiVersion	<string>
-      fieldsType	<string>
-      fieldsV1	<FieldsV1>
-      manager	<string>
-      operation	<string>
-      subresource	<string>
-      time	<string>
-    name	<string>
-    namespace	<string>
-    ownerReferences	<[]OwnerReference>
-      apiVersion	<string> -required-
-      blockOwnerDeletion	<boolean>
-      controller	<boolean>
-      kind	<string> -required-
-      name	<string> -required-
-      uid	<string> -required-
-    resourceVersion	<string>
-    selfLink	<string>
-    uid	<string>
-
-
-")
-
-(ert-deftest kubedoc-tests--resorce-path-canonical/openapiv2 ()
-  (cl-letf (((symbol-function 'kubedoc--kubectl-explain-resource) (lambda (_) kubedoc-tests--openapiv2-raw)))
-    (should (string= (kubedoc--resource-path-canonical "configmaps" "metadata") "configmaps/metadata/"))
-    (should (string= (kubedoc--resource-path-canonical "configmaps" "kind") "configmaps/kind"))))
-
-(ert-deftest kubedoc-tests--resorce-path-canonical/openapiv3 ()
-  (cl-letf (((symbol-function 'kubedoc--kubectl-explain-resource) (lambda (_) kubedoc-tests--openapiv3-raw)))
-    (should (string= (kubedoc--resource-path-canonical "configmaps" "metadata") "configmaps/metadata/"))
-    (should (string= (kubedoc--resource-path-canonical "configmaps" "kind") "configmaps/kind"))))
+(ert-deftest kubedoc-tests--resorce-path-canonical ()
+  (cl-letf (((symbol-function 'kubedoc--resource-completion-table-cached)
+             (lambda () '("configmaps/"
+                          "pods/"
+                          "services/")))
+            ((symbol-function 'kubedoc--field-completion-table-cached)
+             (lambda (_) '("configmaps/metadata"
+                           "configmaps/metadata/name"
+                           "configmaps/kind"))))
+    (should (string=
+             (kubedoc--resource-path-canonical "configmaps" "metadata")
+             "configmaps/metadata/"))
+    (should (string=
+             (kubedoc--resource-path-canonical "configmaps" "kind")
+             "configmaps/kind"))))
 
 (ert-deftest kubedoc-tests--completion-sort ()
   (should (equal
            (kubedoc--completion-sort '("kind" "status/" "metadata/" "apiVersion" "spec/"))
            '("metadata/" "spec/" "status/" "apiVersion" "kind"))))
-
-(ert-deftest parse-kubectl-explain-fields ()
-  (ert-test-erts-file
-   "tests/data-parse-kubectl-explain-fields.erts"
-   (lambda ()
-     (let ((result (kubedoc--parse-kubectl-explain-fields (buffer-string))))
-       (erase-buffer)
-       (point-min)
-       (insert (string-join result "\n"))
-       (insert "\n")))))
 
 (ert-deftest parse-kubectl-explain-fields-v2 ()
   (ert-test-erts-file
