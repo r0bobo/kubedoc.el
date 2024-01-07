@@ -105,19 +105,7 @@ Some Aggregated APIs have no docs for example."
      'kubectl-section (match-string 2))))
 
 (defun kubedoc--kubectl-command (&rest args)
-  "Run kubectl with ARGS and return output as string."
-  (with-temp-buffer
-    (when kubedoc--current-context
-      (push (concat "--context=" kubedoc--current-context) args))
-    (let* ((command (string-join (append '("kubectl") (seq-map #'shell-quote-argument args)) " "))
-           (returncode (call-process-shell-command command nil '(t nil)))
-           (output (buffer-substring (point-min) (point-max))))
-      (if (zerop returncode)
-          output
-        (user-error (string-trim output))))))
-
-(defun kubedoc--kubectl-command-2 (&rest args)
-  "Run kubectl with ARGS and return output as string."
+  "Run kubectl with ARGS and write output to current buffer."
   (when kubedoc--current-context
     (push (concat "--context=" kubedoc--current-context) args))
   (let ((stderr (make-temp-file "emacs-kubedoc-kubectl-stderr-"))
@@ -141,14 +129,15 @@ Some Aggregated APIs have no docs for example."
   "List available kubectl contexts."
   (thread-last
     (kubedoc--with-buffer-to-string
-     #'kubedoc--kubectl-command-2 "config" "get-contexts" "--output=name")
+     #'kubedoc--kubectl-command "config" "get-contexts" "--output=name")
     (split-string)
     (seq-sort #'string<)))
 
-(defun kubedoc--parse-api-resources (resources)
-  ""
+(defun kubedoc--parse-api-resources (input)
+  "Parse INPUT output of kubectl api-resources into list.
+Excludes resouces that match regexps in `kubedoc-excluded-resources'."
   (thread-last
-    resources
+    input
     ;; Drop excluded elements
     (seq-filter
      (lambda (elt)
@@ -167,7 +156,7 @@ Some Aggregated APIs have no docs for example."
   "Completion candidate list for Kubernetes resources in the cluster."
   (thread-first
     (kubedoc--with-buffer-to-string
-     #'kubedoc--kubectl-command-2 "api-resources" "--output" "name")
+     #'kubedoc--kubectl-command "api-resources" "--output" "name")
     (split-string nil t)
     (kubedoc--parse-api-resources)))
 
@@ -184,7 +173,7 @@ Some Aggregated APIs have no docs for example."
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
   (with-temp-buffer
-    (kubedoc--kubectl-command-2 "explain" "--recursive" resource)
+    (kubedoc--kubectl-command "explain" "--recursive" resource)
     (thread-last
       (kubedoc--parse-kubectl-explain-fields-2)
       (seq-map (apply-partially #'format "%s/%s" resource)))))
@@ -297,7 +286,7 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
          (buffer (concat "*Kubernetes Docs <" (string-join path "/") ">*")))
     (unless (get-buffer buffer)
       (with-current-buffer (get-buffer-create buffer)
-        (kubedoc--kubectl-command-2 "explain" (string-join path "."))
+        (kubedoc--kubectl-command "explain" (string-join path "."))
         (when field
           (goto-char (point-max))
           (insert "\n")
