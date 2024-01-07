@@ -306,6 +306,7 @@ Uses current context."
                 nil nil current-path)))
     (apply #'kubedoc--view-resource (split-string (string-trim-right path "/+") "/"))))
 
+;;;###autoload
 (defun kubedoc-for-context ()
   "Show Kubernetes API documentation.
 Prompts for changing current context."
