@@ -43,6 +43,19 @@
 
 ;;;; Declarations
 
+(defgroup kubedoc nil
+  "Kubernetes API documentation."
+  :group 'tools)
+
+(defcustom kubedoc-excluded-resources '("\\.metrics\\.k8s\\.io")
+  "List of regexps for Kubernetes resources to ignore.
+Some Aggregated APIs have no docs for example."
+  :type 'sexp)
+
+(defcustom kubedoc-cache-enabled t
+  "Enable caching."
+  :type 'boolean)
+
 (defconst kubedoc--explain-field-regex
   "^\\([ \t]+\\)\\(\\w+\\)[ \t]+\\(<.*>+\\)[ \t]*\\(-required-\\)?$")
 
@@ -68,13 +81,6 @@
 
 (defvar-local kubedoc--buffer-path nil)
 
-(defvar kubedoc-resource-filter '("\\.metrics\\.k8s\\.io")
-  "Resources to ignore in completion.
-For example Aggregated APIs with no docs.")
-
-(defvar kubedoc-cache-enabled t
-  "Enable kubedoc caching.")
-
 (define-button-type 'kubedoc-field
   'follow-link t
   'help-echo "mouse-2, RET: display this section"
@@ -82,6 +88,8 @@ For example Aggregated APIs with no docs.")
 
 
 ;;;; Commands
+
+;;; Kubectl commands
 
 (defun kubedoc--imenu-goto-field (_name position)
   "Jump to correctly indented field POSITION."
@@ -123,16 +131,31 @@ For example Aggregated APIs with no docs.")
           (user-error (format "kubedoc.el kubectl error: %s" errmsg)))
       (delete-file stderr))))
 
-(defun kubedoc--kubectl-explain-resource (resource)
-  "Field completions for RESOURCE using shell command `kubectl explain'."
-  (kubedoc--kubectl-command "explain" "--recursive" resource))
+(defun kubedoc--with-buffer-to-string (fun &rest args)
+  "Apply FUN with ARGS and return buffer content as string."
+  (with-temp-buffer
+    (apply fun args)
+    (buffer-string)))
 
 (defun kubedoc--kubectl-contexts ()
   "List available kubectl contexts."
-  (sort
-   (split-string
-    (kubedoc--kubectl-command "config" "get-contexts" "--output=name"))
-   #'string<))
+  (thread-last
+    (kubedoc--with-buffer-to-string
+     #'kubedoc--kubectl-command-2 "config" "get-contexts" "--output=name")
+    (split-string)
+    (seq-sort #'string<)))
+
+(defun kubedoc--parse-api-resources (resources)
+  ""
+  (thread-last
+    resources
+    ;; Drop excluded elements
+    (seq-filter
+     (lambda (elt)
+       (seq-every-p
+        (lambda (regex)
+          (not (string-match-p regex elt))) kubedoc-excluded-resources)))
+    (seq-map (apply-partially #'format "%s/"))))
 
 (defun kubedoc--field-button-function (button)
   "Follow field link in BUTTON."
@@ -142,13 +165,11 @@ For example Aggregated APIs with no docs.")
 
 (defun kubedoc--resource-completion-table ()
   "Completion candidate list for Kubernetes resources in the cluster."
-  (seq-filter
-   (lambda (e)
-     (seq-every-p (lambda (regex) (not (string-match-p regex e))) kubedoc-resource-filter))
-   (mapcar
-    (lambda (e) (concat e "/"))
-    (split-string
-     (kubedoc--kubectl-command "api-resources" "--output" "name") nil t))))
+  (thread-first
+    (kubedoc--with-buffer-to-string
+     #'kubedoc--kubectl-command-2 "api-resources" "--output" "name")
+    (split-string nil t)
+    (kubedoc--parse-api-resources)))
 
 (defun kubedoc--resource-completion-table-cached ()
   "Cached completion candidate list for Kubernetes resources in the cluster."
@@ -168,39 +189,18 @@ For example Aggregated APIs with no docs.")
       (kubedoc--parse-kubectl-explain-fields-2)
       (seq-map (apply-partially #'format "%s/%s" resource)))))
 
-(defun kubedoc--parse-kubectl-explain-fields (input)
-  "Parse INPUT and return list of all field paths for given resource.
-INPUT is output from `kubectl explain --recursive'.
-Supports both OpenAPI v2 and v3 schema."
-  (let ((result '())
-        (path '())
-        (base -1)
-        (lines (split-string input "\n" t)))
-    (dolist (line lines)
-      (when (string-match kubedoc--explain-field-regex line)
-        (let* ((depth (length (match-string 1 line)))
-               (field (match-string 2 line)))
-          ;; Set base indention length from first iteration
-          (when (= base -1)
-            (setq base depth))
-          (let ((position (/ (- depth base) base)))
-            ;; Drop all previous path elements that are
-            ;; deeper than the current.
-            (setq path (reverse (seq-subseq (reverse path) 0 position)))
-            (push field path)
-            (push (string-join (reverse path) "/") result)))))
-    ;; Filter result so that every result
-    ;; ends with the left field of each hierarchy.
-    ;; If the result contains '("kind" "metadata" "metadata/labels")
-    ;; the result should be '("kind" "metadata/labels")
-    (reverse
-     (seq-filter
-      (lambda (e1)
-        (not (seq-some
-              (lambda (e2)
-                (string-prefix-p (concat e1 "/") e2))
-              result)))
-      result))))
+(defun kubedoc--field-completion-table-cached (resource)
+  "Cached Completion candidate list for all fields of Kubernetes RESOURCE."
+  (let ((cached (map-elt kubedoc--field-completion-table-cache resource)))
+    (cond
+     ((not kubedoc-cache-enabled)
+      (kubedoc--field-completion-table resource))
+     ((null cached)
+      (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
+        (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
+        all))
+     ((eq cached 'none) nil)
+     (t cached))))
 
 (defun kubedoc--parse-kubectl-explain-fields-2 ()
   "Parse INPUT and return list of all field paths for given resource.
@@ -237,19 +237,6 @@ Supports both OpenAPI v2 and v3 schema."
                 (string-prefix-p (concat e1 "/") e2))
               result)))
       result))))
-
-(defun kubedoc--field-completion-table-cached (resource)
-  "Cached Completion candidate list for all fields of Kubernetes RESOURCE."
-  (let ((cached (map-elt kubedoc--field-completion-table-cache resource)))
-    (cond
-     ((not kubedoc-cache-enabled)
-      (kubedoc--field-completion-table resource))
-     ((null cached)
-      (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
-        (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
-        all))
-     ((eq cached 'none) nil)
-     (t cached))))
 
 (defun kubedoc--completion-table (path)
   "Completion candidate list for given Kubernetes resource and field PATH.
@@ -292,12 +279,10 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
    ((eq action 'metadata)
     '(metadata (category . kubedoc)
       (display-sort-function . kubedoc--completion-sort)))
-
    ((eq (car-safe action) 'boundaries)
     (let* ((start (length (file-name-directory string)))
            (end (string-match-p "/" (cdr action))))
       `(boundaries ,start . ,end)))
-
    (t
     (let ((candidate
            (if (string-equal string "")
@@ -312,7 +297,7 @@ See argument STRING PRED ACTION descriptions in command `try-completion'."
          (buffer (concat "*Kubernetes Docs <" (string-join path "/") ">*")))
     (unless (get-buffer buffer)
       (with-current-buffer (get-buffer-create buffer)
-        (insert (kubedoc--kubectl-command "explain" (string-join path ".")))
+        (kubedoc--kubectl-command-2 "explain" (string-join path "."))
         (when field
           (goto-char (point-max))
           (insert "\n")

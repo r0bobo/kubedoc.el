@@ -18,13 +18,9 @@
 
 (ert-deftest kubedoc-tests--resorce-path-canonical ()
   (cl-letf (((symbol-function 'kubedoc--resource-completion-table-cached)
-             (lambda () '("configmaps/"
-                          "pods/"
-                          "services/")))
+             (lambda () '("configmaps/" "pods/" "services/")))
             ((symbol-function 'kubedoc--field-completion-table-cached)
-             (lambda (_) '("configmaps/metadata"
-                           "configmaps/metadata/name"
-                           "configmaps/kind"))))
+             (lambda (_) '("configmaps/metadata" "configmaps/metadata/name" "configmaps/kind"))))
     (should (string=
              (kubedoc--resource-path-canonical "configmaps" "metadata")
              "configmaps/metadata/"))
@@ -46,6 +42,18 @@
        (point-min)
        (insert (string-join result "\n"))
        (insert "\n")))))
+
+(ert-deftest parse-api-resources ()
+  (should (equal
+           (kubedoc--parse-api-resources
+            '("configmaps"
+              "pods"
+              "services"
+              "nodes.metrics.k8s.io"
+              "pods.metrics.k8s.io"))
+           '("configmaps/"
+             "pods/"
+             "services/"))))
 
 (provide 'kubedoc-tests)
 ;;; kubedoc-tests.el ends here
