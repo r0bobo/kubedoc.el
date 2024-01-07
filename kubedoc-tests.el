@@ -19,17 +19,6 @@
 (defun kubedoc--resource-completion-table-cached-mock ()
   '("configmaps/" "pods/" "services/"))
 
-(defun kubedoc-erts-test (file fun)
-  ""
-  (ert-test-erts-file
-   file
-   (lambda ()
-     (let ((result (funcall fun)))
-       (erase-buffer)
-       (point-min)
-       (insert (string-join result "\n"))
-       (insert "\n")))))
-
 (ert-deftest resorce-path-canonical ()
   (cl-letf (((symbol-function 'kubedoc--resource-completion-table-cached)
              #'kubedoc--resource-completion-table-cached-mock)
