@@ -137,8 +137,9 @@ Excludes resouces that match regexps in `kubedoc-excluded-resources'."
       (seq-map (apply-partially #'format "%s/")))))
 
 (defun kubedoc--parse-kubectl-explain-fields ()
-  "Parse resource document and return list of all field paths for given resource.
+  "Parse resource document from current buffer.
 Buffer should contain output from `kubectl explain --recursive'.
+Result is list of full paths for current resource.
 Supports both OpenAPI v2 and v3 schema."
   (let ((result '())
         (path '())
