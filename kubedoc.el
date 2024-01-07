@@ -52,10 +52,6 @@
 Some Aggregated APIs have no docs for example."
   :type 'sexp)
 
-(defcustom kubedoc-cache-enabled t
-  "Enable caching."
-  :type 'boolean)
-
 (defconst kubedoc--explain-field-regex
   "^\\([ \t]+\\)\\(\\w+\\)[ \t]+\\(<.*>+\\)[ \t]*\\(-required-\\)?$")
 
@@ -193,13 +189,9 @@ Supports both OpenAPI v2 and v3 schema."
 
 (defun kubedoc--resource-completion-table-cached ()
   "Cached completion candidate list for Kubernetes resources in the cluster."
-  (cond
-   ((not kubedoc-cache-enabled)
-    (kubedoc--resource-completion-table))
-   ((null kubedoc--resource-completion-table-cache)
-    (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table))
-    kubedoc--resource-completion-table-cache)
-   (t kubedoc--resource-completion-table-cache)))
+  (if (null kubedoc--resource-completion-table-cache)
+      (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table))
+    kubedoc--resource-completion-table-cache))
 
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
@@ -211,20 +203,15 @@ Supports both OpenAPI v2 and v3 schema."
 
 (defun kubedoc--field-completion-table-cached (resource)
   "Cached Completion candidate list for all fields of Kubernetes RESOURCE."
-  (let ((cached (map-elt kubedoc--field-completion-table-cache resource)))
-    (cond
-     ((not kubedoc-cache-enabled)
-      (kubedoc--field-completion-table resource))
-     ((null cached)
-      (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
-        (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
-        all))
-     ((eq cached 'none) nil)
-     (t cached))))
+  (if-let (cached (map-elt kubedoc--field-completion-table-cache resource))
+      cached
+    (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
+      (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
+      all)))
 
 (defun kubedoc--completion-table (path)
   "Completion candidate list for given Kubernetes resource and field PATH.
-PATH is a filesystem style path such as pods/spec/containers"
+PATH is a filesystem style path such as pods/spec/containers."
   (let* ((string-parts (split-string path "/+"))
          (resource (car string-parts)))
     (if (= (length string-parts) 1)

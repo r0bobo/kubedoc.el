@@ -13,9 +13,6 @@
 ;; Make sure kubectl does not have valid config.
 (setenv "KUBECONFIG" "/dev/null")
 
-;; Disable caching during tests
-(setq kubedoc-cache-enabled nil)
-
 (defun kubedoc--field-completion-table-cached-mock (_)
   '("configmaps/metadata" "configmaps/metadata/name" "configmaps/kind"))
 
