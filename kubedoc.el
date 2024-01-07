@@ -112,10 +112,16 @@ For example Aggregated APIs with no docs.")
   "Run kubectl with ARGS and return output as string."
   (when kubedoc--current-context
     (push (concat "--context=" kubedoc--current-context) args))
-  (let* ((command (string-join (append '("kubectl") (seq-map #'shell-quote-argument args)) " "))
-         (returncode (call-process-shell-command command nil '(t nil))))
-    (unless (zerop returncode)
-      (user-error "Kubectl error"))))
+  (let ((stderr (make-temp-file "emacs-kubedoc-kubectl-stderr-"))
+        (kubectl (executable-find "kubectl")))
+    (unwind-protect
+        (when-let ((returncode (apply #'call-process kubectl nil `(t ,stderr) nil args))
+                   ((/= returncode 0))
+                   (errmsg (with-temp-buffer
+                             (insert-file-contents stderr)
+                             (buffer-string))))
+          (user-error (format "kubedoc.el kubectl error: %s" errmsg)))
+      (delete-file stderr))))
 
 (defun kubedoc--kubectl-explain-resource (resource)
   "Field completions for RESOURCE using shell command `kubectl explain'."
