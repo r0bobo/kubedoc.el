@@ -32,7 +32,6 @@
 
 ;;;; Requirements
 
-(require 'cl-lib)
 (require 'map)
 (require 'seq)
 (require 'subr-x)
@@ -69,7 +68,7 @@ Some Aggregated APIs have no docs for example."
     (set-keymap-parent map (make-composed-keymap button-buffer-map special-mode-map))
     map))
 
-(defvar kubedoc--field-completion-table-cache nil)
+(defvar kubedoc--field-completion-table-cache (make-hash-table :test 'equal))
 
 (defvar kubedoc--resource-completion-table-cache nil)
 
@@ -189,9 +188,9 @@ Supports both OpenAPI v2 and v3 schema."
 
 (defun kubedoc--resource-completion-table-cached ()
   "Cached completion candidate list for Kubernetes resources in the cluster."
-  (if (null kubedoc--resource-completion-table-cache)
-      (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table))
-    kubedoc--resource-completion-table-cache))
+  (if-let ((cached kubedoc--resource-completion-table-cache))
+      cached
+    (setq kubedoc--resource-completion-table-cache (kubedoc--resource-completion-table))))
 
 (defun kubedoc--field-completion-table (resource)
   "Completion candidate list for all fields of Kubernetes RESOURCE."
@@ -205,9 +204,7 @@ Supports both OpenAPI v2 and v3 schema."
   "Cached Completion candidate list for all fields of Kubernetes RESOURCE."
   (if-let (cached (map-elt kubedoc--field-completion-table-cache resource))
       cached
-    (let* ((all (if-let ((result (kubedoc--field-completion-table resource))) result 'none)))
-      (cl-pushnew `(,resource . ,all) kubedoc--field-completion-table-cache)
-      all)))
+    (map-put! kubedoc--field-completion-table-cache resource (kubedoc--field-completion-table resource))))
 
 (defun kubedoc--completion-table (path)
   "Completion candidate list for given Kubernetes resource and field PATH.
@@ -341,7 +338,7 @@ Prompts for changing current context."
 (defun kubedoc-invalidate-cache ()
   "Invalidate kubedoc completion cache."
   (interactive)
-  (setq kubedoc--field-completion-table-cache nil)
+  (setq kubedoc--field-completion-table-cache (make-hash-table :test 'equal))
   (setq kubedoc--resource-completion-table-cache nil))
 
 
