@@ -1,7 +1,7 @@
 all: test lint compile doctor
 
 test:
-	eldev test
+	eldev test -u on,text
 
 lint:
 	eldev lint

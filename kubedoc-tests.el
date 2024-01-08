@@ -13,51 +13,69 @@
 ;; Make sure kubectl does not have valid config.
 (setenv "KUBECONFIG" "/dev/null")
 
-(defconst kubedoc-tests--openapiv2-raw
-  "KIND:     ConfigMap
-VERSION:  v1
+(defun kubedoc--field-completion-table-cached-mock (_)
+  '("configmaps/metadata" "configmaps/metadata/name" "configmaps/kind"))
 
-DESCRIPTION:
-     ConfigMap holds configuration data for pods to consume.
+(defun kubedoc--resource-completion-table-cached-mock ()
+  '("configmaps/" "pods/" "services/"))
 
-FIELDS:
-   apiVersion	<string>
-   binaryData	<map[string]string>
-   data	<map[string]string>
-   immutable	<boolean>
-   kind	<string>
-   metadata	<Object>
-      annotations	<map[string]string>
-      creationTimestamp	<string>
-      deletionGracePeriodSeconds	<integer>
-      deletionTimestamp	<string>
-      finalizers	<[]string>
-      generateName	<string>
-      generation	<integer>
-      labels	<map[string]string>
-      managedFields	<[]Object>
-         apiVersion	<string>
-         fieldsType	<string>
-         fieldsV1	<map[string]>
-         manager	<string>
-         operation	<string>
-         subresource	<string>
-         time	<string>
-      name	<string>
-      namespace	<string>
-      ownerReferences	<[]Object>
-         apiVersion	<string>
-         blockOwnerDeletion	<boolean>
-         controller	<boolean>
-         kind	<string>
-         name	<string>
-         uid	<string>
-      resourceVersion	<string>
-      selfLink	<string>
-      uid	<string>
-")
+(ert-deftest resorce-path-canonical ()
+  (cl-letf (((symbol-function 'kubedoc--resource-completion-table-cached)
+             #'kubedoc--resource-completion-table-cached-mock)
+            ((symbol-function 'kubedoc--field-completion-table-cached)
+             #'kubedoc--field-completion-table-cached-mock))
+    (should (string=
+             (kubedoc--resource-path-canonical "configmaps" "metadata")
+             "configmaps/metadata/"))
+    (should (string=
+             (kubedoc--resource-path-canonical "configmaps" "kind")
+             "configmaps/kind"))))
 
-(defconst kubedoc-tests--openapiv2-parsed
+(ert-deftest completion-sort ()
+  (should (equal
+           (kubedoc--completion-sort '("kind" "status/" "metadata/" "apiVersion" "spec/"))
+           '("metadata/" "spec/" "status/" "apiVersion" "kind"))))
+
+(ert-deftest completion-table ()
+  (cl-letf (((symbol-function 'kubedoc--resource-completion-table-cached)
+             #'kubedoc--resource-completion-table-cached-mock)
+            ((symbol-function 'kubedoc--field-completion-table-cached)
+             #'kubedoc--field-completion-table-cached-mock))
+    (should (equal
+             (kubedoc--completion-table "configmaps/")
+             '("metadata" "metadata/" "kind")))))
+
+(ert-deftest parse-api-resources ()
+  (with-temp-buffer
+    (insert "configmaps
+deployments.apps
+nodes.metrics.k8s.io
+pods
+pods.metrics.k8s.io
+services")
+    (should
+     (equal
+      (kubedoc--parse-api-resources)
+      '("configmaps/" "deployments.apps/" "pods/" "services/")))))
+
+(ert-deftest parse-kubectl-explain-fields/openapiv3 ()
+  (with-temp-buffer
+    (insert kubectl-explain-openapiv3)
+    (should
+     (equal
+      (kubedoc--parse-kubectl-explain-fields)
+      kubectl-explain-fields-expected))))
+
+(ert-deftest parse-kubectl-explain-fields/openapiv2 ()
+  (with-temp-buffer
+    (insert kubectl-explain-openapiv2)
+    (should
+     (equal
+      (kubedoc--parse-kubectl-explain-fields)
+      kubectl-explain-fields-expected))))
+
+
+(defconst kubectl-explain-fields-expected
   '("apiVersion"
     "binaryData"
     "data"
@@ -90,7 +108,7 @@ FIELDS:
     "metadata/selfLink"
     "metadata/uid"))
 
-(defconst kubedoc-tests--openapiv3-raw
+(defconst kubectl-explain-openapiv3
   "KIND:       ConfigMap
 VERSION:    v1
 
@@ -133,79 +151,51 @@ FIELDS:
     selfLink	<string>
     uid	<string>
 
-
 ")
 
-(defconst kubedoc-tests--openapiv3-parsed
-  '("apiVersion"
-    "binaryData"
-    "data"
-    "immutable"
-    "kind"
-    "metadata/annotations"
-    "metadata/creationTimestamp"
-    "metadata/deletionGracePeriodSeconds"
-    "metadata/deletionTimestamp"
-    "metadata/finalizers"
-    "metadata/generateName"
-    "metadata/generation"
-    "metadata/labels"
-    "metadata/managedFields/apiVersion"
-    "metadata/managedFields/fieldsType"
-    "metadata/managedFields/fieldsV1"
-    "metadata/managedFields/manager"
-    "metadata/managedFields/operation"
-    "metadata/managedFields/subresource"
-    "metadata/managedFields/time"
-    "metadata/name"
-    "metadata/namespace"
-    "metadata/ownerReferences/apiVersion"
-    "metadata/ownerReferences/blockOwnerDeletion"
-    "metadata/ownerReferences/controller"
-    "metadata/ownerReferences/kind"
-    "metadata/ownerReferences/name"
-    "metadata/ownerReferences/uid"
-    "metadata/resourceVersion"
-    "metadata/selfLink"
-    "metadata/uid"))
+(defconst kubectl-explain-openapiv2
+  "KIND:     ConfigMap
+VERSION:  v1
 
-(defmacro kubedoc-tests-fixture (mock-fun &rest body)
-  "Run test (BODY) with (MOCK-FUN) as kubedoc--field-completion-source-function."
-  `(unwind-protect
-       (progn (setq kubedoc--field-completion-source-function ,mock-fun)
-              ,@body)
-     (setq kubedoc--field-completion-source-function nil)))
+DESCRIPTION:
+     ConfigMap holds configuration data for pods to consume.
 
-(ert-deftest kubedoc-tests--parse-kubectl-explain-fields/openapiv2 ()
-  (should
-   (seq-set-equal-p
-    (kubedoc--parse-kubectl-explain-fields kubedoc-tests--openapiv2-raw)
-    kubedoc-tests--openapiv2-parsed)))
-
-(ert-deftest kubedoc-tests--parse-kubectl-explain-fields/openapiv3 ()
-  (should
-   (seq-set-equal-p
-    (kubedoc--parse-kubectl-explain-fields kubedoc-tests--openapiv3-raw)
-    kubedoc-tests--openapiv3-parsed)))
-
-(ert-deftest kubedoc-tests--resorce-path-canonical/openapiv2 ()
-  (kubedoc-tests-fixture
-   #'(lambda (_) kubedoc-tests--openapiv2-raw)
-   (should (string= (kubedoc--resource-path-canonical "configmaps" "metadata") "configmaps/metadata/"))
-   (should (string= (kubedoc--resource-path-canonical "configmaps" "kind") "configmaps/kind"))))
-
-(ert-deftest kubedoc-tests--resorce-path-canonical/openapiv3 ()
-  (kubedoc-tests-fixture
-   #'(lambda (_) kubedoc-tests--openapiv3-raw)
-   (should (string= (kubedoc--resource-path-canonical "configmaps" "metadata") "configmaps/metadata/"))
-   (should (string= (kubedoc--resource-path-canonical "configmaps" "kind") "configmaps/kind"))))
-
-(ert-deftest kubedoc-tests--completion-sort ()
-  (should (equal
-           (kubedoc--completion-sort '("kind" "status/" "metadata/" "apiVersion" "spec/"))
-           '("metadata/" "spec/" "status/" "apiVersion" "kind"))))
-
-(ert t)
+FIELDS:
+   apiVersion	<string>
+   binaryData	<map[string]string>
+   data	<map[string]string>
+   immutable	<boolean>
+   kind	<string>
+   metadata	<Object>
+      annotations	<map[string]string>
+      creationTimestamp	<string>
+      deletionGracePeriodSeconds	<integer>
+      deletionTimestamp	<string>
+      finalizers	<[]string>
+      generateName	<string>
+      generation	<integer>
+      labels	<map[string]string>
+      managedFields	<[]Object>
+         apiVersion	<string>
+         fieldsType	<string>
+         fieldsV1	<map[string]>
+         manager	<string>
+         operation	<string>
+         subresource	<string>
+         time	<string>
+      name	<string>
+      namespace	<string>
+      ownerReferences	<[]Object>
+         apiVersion	<string>
+         blockOwnerDeletion	<boolean>
+         controller	<boolean>
+         kind	<string>
+         name	<string>
+         uid	<string>
+      resourceVersion	<string>
+      selfLink	<string>
+      uid	<string>
+")
 
 (provide 'kubedoc-tests)
 ;;; kubedoc-tests.el ends here
