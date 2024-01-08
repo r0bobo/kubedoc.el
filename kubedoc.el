@@ -114,11 +114,11 @@ Some Aggregated APIs have no docs for example."
   (let ((stderr (make-temp-file "emacs-kubedoc-kubectl-stderr-"))
         (kubectl (executable-find "kubectl")))
     (unwind-protect
-        (when-let ((returncode (apply #'call-process kubectl nil `(t ,stderr) nil args))
-                   ((/= returncode 0))
-                   (errmsg (with-temp-buffer
-                             (insert-file-contents stderr)
-                             (buffer-string))))
+        (when-let* ((returncode (apply #'call-process kubectl nil `(t ,stderr) nil args))
+                    ((/= returncode 0))
+                    (errmsg (with-temp-buffer
+                              (insert-file-contents stderr)
+                              (buffer-string))))
           (user-error (format "kubedoc.el kubectl error: %s" errmsg)))
       (delete-file stderr))))
 

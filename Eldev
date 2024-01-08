@@ -7,3 +7,4 @@
 
 (eldev-use-plugin 'autoloads)
 (eldev-use-plugin 'maintainer)
+(eldev-use-plugin 'undercover)
