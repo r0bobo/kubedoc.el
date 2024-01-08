@@ -25,21 +25,18 @@ jobs:
         uses: purcell/setup-emacs@master
         with:
           version: ${{ matrix.emacs_version }}
-
       - name: Setup Eldev
         uses: emacs-eldev/setup-eldev@v1
-
       - name: Checkout source code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
-      - name: eldev/test
-        run: eldev --color=always --debug --packaged --time --verbose test
-
-      - name: eldev/compile
-        run: eldev --color=always --debug --packaged --time --verbose compile --warnings-as-errors
-
-      - name: eldev/lint
-        run: eldev --color=always --debug --packaged --time --verbose lint
-
-      - name: eldev/doctor
-        run: eldev --color=always --debug --packaged --time --verbose doctor
+      - name: Tests with coverage
+        run: eldev -C -dTv test -u on,text
+      - name: Tests on packaged
+        run: eldev -C -dpTv test
+      - name: Compile
+        run: eldev -C -dpTv compile -W
+      - name: Lint
+        run: eldev -C -dpTv lint
+      - name: Eldev Doctor
+        run: eldev -C -dpTv doctor
