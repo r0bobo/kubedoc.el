@@ -28,7 +28,7 @@ jobs:
       - name: Setup Eldev
         uses: emacs-eldev/setup-eldev@v1
       - name: Checkout source code
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v4
 
       - name: Tests with coverage
         run: eldev -C -dTv test -u on,text
