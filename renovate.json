@@ -12,7 +12,7 @@
     ":renovatePrefix",
     "config:best-practices",
     "docker:enableMajor",
-    "group:kubernetes",
+    "group:kubernetesMonorepo",
     "group:linters",
     "group:recommended",
     "customManagers:dockerfileVersions",
