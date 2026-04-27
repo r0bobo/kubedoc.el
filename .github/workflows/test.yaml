@@ -26,7 +26,7 @@ jobs:
         with:
           version: ${{ matrix.emacs_version }}
       - name: Setup Eldev
-        uses: emacs-eldev/setup-eldev@v1
+        uses: emacs-eldev/setup-eldev@66eef997fb15bde4364c00acd4ee459f8be9f8b4 # v1.5
       - name: Checkout source code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
