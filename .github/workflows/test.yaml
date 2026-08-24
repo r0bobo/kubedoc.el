@@ -22,7 +22,7 @@ jobs:
           - snapshot
     steps:
       - name: Setup Emacs
-        uses: purcell/setup-emacs@master
+        uses: purcell/setup-emacs@34c6ded44899fd1bf74d2889558befd1750e61a7 # master
         with:
           version: ${{ matrix.emacs_version }}
       - name: Setup Eldev
